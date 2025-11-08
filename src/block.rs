@@ -1,66 +1,7 @@
 use sha2::{Digest, Sha256};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-// ============== TRANSACTION ==============
-#[derive(Debug, Clone)]
-pub struct Transaction {
-    pub from: String,
-    pub to: String,
-    pub amount: f64,
-    pub timestamp: u64,
-}
-
-impl Transaction {
-    pub fn new(from: String, to: String, amount: f64) -> Transaction {
-        let now = SystemTime::now();
-        let since_epoch = now.duration_since(UNIX_EPOCH).expect("Time went backwards");
-        let timestamp = since_epoch.as_secs();
-        Transaction { from, to, amount, timestamp }
-    }
-
-    pub fn is_valid(&self) -> bool {
-        if self.amount <= 0.0 { return false; }
-        if self.from.is_empty() || self.to.is_empty() { return false; }
-        if self.from == self.to { return false; }
-        true
-    }
-}
-
-// ============== MEMPOOL ==============
-pub struct MemPool {
-    pub transactions: Vec<Transaction>,
-}
-
-impl MemPool {
-    pub fn new() -> MemPool {
-        MemPool { transactions: Vec::new() }
-    }
-
-    pub fn add_transaction(&mut self, tx: Transaction) -> bool {
-        if tx.is_valid() {
-            self.transactions.push(tx);
-            true
-        } else {
-            false
-        }
-    }
-
-    pub fn get_transactions(&mut self, count: usize) -> Vec<Transaction> {
-        let mut result = Vec::new();
-        for _ in 0..count {
-            if let Some(tx) = self.transactions.pop() {
-                result.push(tx);
-            }
-        }
-        result
-    }
-
-    pub fn clear(&mut self) {
-        self.transactions.clear();
-    }
-}
-
-// ============== BLOCK ==============
+// ========== BLOCK (сначала блок!) ==============
 #[derive(Debug)]
 pub struct Block {
     pub index: u32,
@@ -144,7 +85,7 @@ impl Block {
     }
 }
 
-// ============== BLOCKCHAIN ==============
+// ========== BLOCKCHAIN ==============
 pub struct Blockchain {
     pub chain: Vec<Block>,
     pub difficulty: u32,
@@ -198,5 +139,64 @@ impl Blockchain {
             }
         }
         true
+    }
+}
+
+// ========== TRANSACTION ==============
+#[derive(Debug, Clone)]
+pub struct Transaction {
+    pub from: String,
+    pub to: String,
+    pub amount: f64,
+    pub timestamp: u64,
+}
+
+impl Transaction {
+    pub fn new(from: String, to: String, amount: f64) -> Transaction {
+        let now = SystemTime::now();
+        let since_epoch = now.duration_since(UNIX_EPOCH).expect("Time went backwards");
+        let timestamp = since_epoch.as_secs();
+        Transaction { from, to, amount, timestamp }
+    }
+
+    pub fn is_valid(&self) -> bool {
+        if self.amount <= 0.0 { return false; }
+        if self.from.is_empty() || self.to.is_empty() { return false; }
+        if self.from == self.to { return false; }
+        true
+    }
+}
+
+// ========== MEMPOOL ==============
+pub struct MemPool {
+    pub transactions: Vec<Transaction>,
+}
+
+impl MemPool {
+    pub fn new() -> MemPool {
+        MemPool { transactions: Vec::new() }
+    }
+
+    pub fn add_transaction(&mut self, tx: Transaction) -> bool {
+        if tx.is_valid() {
+            self.transactions.push(tx);
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn get_transactions(&mut self, count: usize) -> Vec<Transaction> {
+        let mut result = Vec::new();
+        for _ in 0..count {
+            if let Some(tx) = self.transactions.pop() {
+                result.push(tx);
+            }
+        }
+        result
+    }
+
+    pub fn clear(&mut self) {
+        self.transactions.clear();
     }
 }
