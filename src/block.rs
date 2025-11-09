@@ -120,6 +120,8 @@ pub struct Blockchain {
     pub chain: Vec<Block>,          // Все блоки в порядке
     pub difficulty: u32,            // Сложность майнинга
     pub mempool: MemPool,           // Пул ожидающих транзакций
+    pub target_block_time: u64,    //целевое время на один блок(10 секунд)
+    pub adjustment_interval: u32,  //проверяем сложность каждые 10 блоков
 }
 
 impl Blockchain {
@@ -129,6 +131,8 @@ impl Blockchain {
             chain: Vec::new(),
             difficulty: 2,
             mempool: MemPool::new(),
+            target_block_time: 10,   // целевое время 10 секунд на блок
+            adjustment_interval:10,  // проверяем каждые 10 блоков
         };
         // Добавляем первый (genesis) блок
         let genesis = Block::genesis();
@@ -163,7 +167,8 @@ impl Blockchain {
         // Проверяем валидность перед добавлением
         if new_block.is_valid(prev_block) {
             self.chain.push(new_block);
-            true
+            self.adjust_difficulty();    // проверяем нужно ли менять сложность
+            true 
         } else {
             false
         }
@@ -183,8 +188,44 @@ impl Blockchain {
         }
         true  // Вся цепь целостна
     }
-}
 
+// автоматически меняет сложность в зависимости от скорости блоков 
+    pub fn adjust_difficulty(&mut self) {
+        // проверка 1 - если блоков меньше 10 то не пересчитываем
+        if self.chain.len() <self.adjustment_interval as usize{
+            return;
+        }
+
+        // проверка 2 - пересчитываем только каждые 10 блоков
+        if self.chain.len() % self.adjustment_interval as usize != 0 {
+            return;
+        }
+
+        //находим первый блок из 10 блоков 
+        let start_idx = self.chain.len() - self.adjustment_interval as usize;
+        let end_idx = self.chain.len() - 1;
+
+        let first_block = &self.chain[start_idx];
+        let last_block = &self.chain[end_idx];
+
+        // вычисляем сколько времени ушло на последние 10 блоков
+        let actual_time = last_block.timestamp - first_block.timestamp;
+
+        // целевое время 10 сек/блок * 10 блоков = 100 секунд
+        let target_time = self.target_block_time * self.adjustment_interval as u64;
+
+        // ЕСЛИ блоки создавались БЫСТРО (меньше 100 секунд) - СЛОЖНОСТЬ + 1
+        if actual_time < target_time{
+            self.difficulty += 1;
+            println!("блоки быстро! сложность: {}", self.difficulty);
+        }
+        // ЕСЛИ блоки создавались МЕДЛЕННО (больше 100 секунд) СЛОЖНОСТЬ - 1
+        else if actual_time > target_time && self.difficulty > 1 {
+            self.difficulty -= 1;
+            println!("блоки медленно! сложность: {}", self.difficulty);
+        }
+    }
+}
 // ========== TRANSACTION ==============
 // Транзакция - перевод денег с подписью и открытым ключом
 #[derive(Debug, Clone)]
