@@ -1,50 +1,75 @@
 mod block;
-use crate::block::{Block, Blockchain, Transaction};
+use crate::block::{Blockchain, Transaction, Wallet};
 
 fn main() {
+    // Создаём новый блокчейн (автоматически создаёт genesis блок)
     let mut blockchain = Blockchain::new();
-    println!("🔗 Genesis блок создан!\n");
+    println!("Blockchain initialized\n");
 
-    println!("─── Создание транзакций ───");
-    let tx1 = Transaction::new("Alice".to_string(), "Bob".to_string(), 10.0);
-    let tx2 = Transaction::new("Bob".to_string(), "Charlie".to_string(), 5.0);
-    let tx3 = Transaction::new("Charlie".to_string(), "Alice".to_string(), 3.0);
+    // Создаём три кошелька (каждый с приватным и публичным ключом)
+    println!("--- Creating wallets ---");
+    let wallet1 = Wallet::new();
+    let wallet2 = Wallet::new();
+    let wallet3 = Wallet::new();
 
-    println!("✓ Транзакция 1: Alice → Bob (10 монет)");
-    println!("✓ Транзакция 2: Bob → Charlie (5 монет)");
-    println!("✓ Транзакция 3: Charlie → Alice (3 монеты)\n");
+    // Выводим адреса кошельков (первые 10 символов публичного ключа)
+    println!("Wallet 1 address: {}", wallet1.get_address());
+    println!("Wallet 2 address: {}", wallet2.get_address());
+    println!("Wallet 3 address: {}", wallet3.get_address());
 
-    println!("─── Добавление в MemPool ───");
+    // Создаём и подписываем транзакции приватными ключами
+    println!("\n--- Creating and signing transactions ---");
+    
+    // Транзакция 1: Wallet1 отправляет 10 единиц Wallet2
+    let tx1_data = format!("{}->{}:{}", wallet1.get_address(), wallet2.get_address(), 10.0);
+    let tx1_sig = wallet1.sign_transaction(&tx1_data);
+    let tx1 = Transaction::new(
+        wallet1.get_address(),
+        wallet2.get_address(),
+        10.0,
+        tx1_sig,
+        wallet1.public_key.clone(),
+    );
+    
+    // Транзакция 2: Wallet2 отправляет 5 единиц Wallet3
+    let tx2_data = format!("{}->{}:{}", wallet2.get_address(), wallet3.get_address(), 5.0);
+    let tx2_sig = wallet2.sign_transaction(&tx2_data);
+    let tx2 = Transaction::new(
+        wallet2.get_address(),
+        wallet3.get_address(),
+        5.0,
+        tx2_sig,
+        wallet2.public_key.clone(),
+    );
+
+    println!("Transaction 1: {} -> {} (10 units)", wallet1.get_address(), wallet2.get_address());
+    println!("Transaction 2: {} -> {} (5 units)", wallet2.get_address(), wallet3.get_address());
+
+    // Добавляем транзакции в MemPool (очередь ожидания)
+    println!("\n--- Adding to mempool ---");
     blockchain.add_transaction(tx1);
     blockchain.add_transaction(tx2);
-    blockchain.add_transaction(tx3);
-    println!("✓ Все транзакции добавлены в MemPool\n");
+    println!("Transactions added to mempool");
 
-    println!("─── Майнинг блока 1 ───");
+    // Майним первый блок с этими транзакциями
+    println!("\n--- Mining block 1 ---");
     blockchain.mine_block();
-    println!();
 
-    println!("─── Создание новых транзакций ───");
-    let tx4 = Transaction::new("Alice".to_string(), "David".to_string(), 7.0);
-    blockchain.add_transaction(tx4);
-    println!("✓ Транзакция добавлена\n");
-
-    println!("─── Майнинг блока 2 ───");
-    blockchain.mine_block();
-    println!();
-
-    println!("─── Проверка цепочки ───");
+    // Проверяем, что цепочка целостна
+    println!("\n--- Checking chain validity ---");
     let is_valid = blockchain.is_chain_valid();
-    println!("Цепочка валидна? {}\n", is_valid);
+    println!("Chain valid: {}\n", is_valid);
 
-    println!("─── Все блоки и транзакции ───");
+    // Выводим все блоки и их транзакции
+    println!("--- All blocks and transactions ---");
     for (i, block) in blockchain.chain.iter().enumerate() {
-        println!("📦 Блок {}:", i);
-        println!("   Hash: {}...", &block.hash[0..16]);
-        println!("   Транзакции: {}", block.transactions.len());
+        println!("Block {}:", i);
+        println!("  Hash: {}...", &block.hash[0..16]);
+        println!("  Transactions: {}", block.transactions.len());
         for (j, tx) in block.transactions.iter().enumerate() {
-            println!("     Tx {}: {} → {} ({} монет)", j + 1, tx.from, tx.to, tx.amount);
+            println!("    Tx {}: {} -> {} ({} units)", j + 1, tx.from, tx.to, tx.amount);
+            println!("    Signature: {}...", &tx.signature[0..16]);
         }
-        println!();
     }
 }
+
