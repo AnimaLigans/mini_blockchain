@@ -1,6 +1,8 @@
-# Rust / Cargo
 target/
-**/*.rs.bk
-
-# VS Code
+Cargo.lock
+.DS_Store
+*.swp
+*.swo
+*~
+.idea/
 .vscode/
